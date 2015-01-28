@@ -28,8 +28,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/Unknwon/com"
-	"github.com/Unknwon/macaron"
+	"github.com/fym201/bigo"
+	"github.com/fym201/bigo/utl"
 )
 
 // NOTE: last sync 1928ed2 on Aug 26, 2014.
@@ -40,7 +40,7 @@ func Version() string {
 	return _VERSION
 }
 
-func bind(ctx *macaron.Context, obj interface{}, ifacePtr ...interface{}) {
+func bind(ctx *bigo.Context, obj interface{}, ifacePtr ...interface{}) {
 	contentType := ctx.Req.Header.Get("Content-Type")
 	if ctx.Req.Method == "POST" || ctx.Req.Method == "PUT" || len(contentType) > 0 {
 		switch {
@@ -102,8 +102,8 @@ func errorHandler(errs Errors, rw http.ResponseWriter) {
 // Form or Json middleware directly. An interface pointer can
 // be added as a second argument in order to map the struct to
 // a specific interface.
-func Bind(obj interface{}, ifacePtr ...interface{}) macaron.Handler {
-	return func(ctx *macaron.Context) {
+func Bind(obj interface{}, ifacePtr ...interface{}) bigo.Handler {
+	return func(ctx *bigo.Context) {
 		bind(ctx, obj, ifacePtr...)
 		if handler, ok := obj.(ErrorHandler); ok {
 			ctx.Invoke(handler.Error)
@@ -116,8 +116,8 @@ func Bind(obj interface{}, ifacePtr ...interface{}) macaron.Handler {
 // BindIgnErr will do the exactly same thing as Bind but without any
 // error handling, which user has freedom to deal with them.
 // This allows user take advantages of validation.
-func BindIgnErr(obj interface{}, ifacePtr ...interface{}) macaron.Handler {
-	return func(ctx *macaron.Context) {
+func BindIgnErr(obj interface{}, ifacePtr ...interface{}) bigo.Handler {
+	return func(ctx *bigo.Context) {
 		bind(ctx, obj, ifacePtr...)
 	}
 }
@@ -131,8 +131,8 @@ func BindIgnErr(obj interface{}, ifacePtr ...interface{}) macaron.Handler {
 // keys, for example: key=val1&key=val2&key=val3
 // An interface pointer can be added as a second argument in order
 // to map the struct to a specific interface.
-func Form(formStruct interface{}, ifacePtr ...interface{}) macaron.Handler {
-	return func(ctx *macaron.Context) {
+func Form(formStruct interface{}, ifacePtr ...interface{}) bigo.Handler {
+	return func(ctx *bigo.Context) {
 		var errors Errors
 
 		ensureNotPointer(formStruct)
@@ -159,8 +159,8 @@ var MaxMemory = int64(1024 * 1024 * 10)
 // and handle file uploads. Like the other deserialization middleware handlers,
 // you can pass in an interface to make the interface available for injection
 // into other handlers later.
-func MultipartForm(formStruct interface{}, ifacePtr ...interface{}) macaron.Handler {
-	return func(ctx *macaron.Context) {
+func MultipartForm(formStruct interface{}, ifacePtr ...interface{}) bigo.Handler {
+	return func(ctx *bigo.Context) {
 		var errors Errors
 		ensureNotPointer(formStruct)
 		formStruct := reflect.New(reflect.TypeOf(formStruct))
@@ -188,8 +188,8 @@ func MultipartForm(formStruct interface{}, ifacePtr ...interface{}) macaron.Hand
 // validated, but no error handling is actually performed here.
 // An interface pointer can be added as a second argument in order
 // to map the struct to a specific interface.
-func Json(jsonStruct interface{}, ifacePtr ...interface{}) macaron.Handler {
-	return func(ctx *macaron.Context) {
+func Json(jsonStruct interface{}, ifacePtr ...interface{}) bigo.Handler {
+	return func(ctx *bigo.Context) {
 		var errors Errors
 		ensureNotPointer(jsonStruct)
 		jsonStruct := reflect.New(reflect.TypeOf(jsonStruct))
@@ -208,8 +208,8 @@ func Json(jsonStruct interface{}, ifacePtr ...interface{}) macaron.Handler {
 // passed in implements Validator, then the user-defined Validate method
 // is executed, and its errors are mapped to the context. This middleware
 // performs no error handling: it merely detects errors and maps them.
-func Validate(obj interface{}) macaron.Handler {
-	return func(ctx *macaron.Context) {
+func Validate(obj interface{}) bigo.Handler {
+	return func(ctx *bigo.Context) {
 		var errors Errors
 		v := reflect.ValueOf(obj)
 		k := v.Kind()
@@ -360,8 +360,8 @@ func validateStruct(errors Errors, obj interface{}) Errors {
 				if len(nums) != 2 {
 					break VALIDATE_RULES
 				}
-				val := com.StrTo(fmt.Sprintf("%v", fieldValue)).MustInt()
-				if val < com.StrTo(nums[0]).MustInt() || val > com.StrTo(nums[1]).MustInt() {
+				val := utl.Str(fmt.Sprintf("%v", fieldValue)).MustInt()
+				if val < utl.Str(nums[0]).MustInt() || val > utl.Str(nums[1]).MustInt() {
 					errors.Add([]string{field.Name}, ERR_RANGE, "Range")
 					break VALIDATE_RULES
 				}
@@ -584,7 +584,7 @@ func ensureNotPointer(obj interface{}) {
 // Performs validation and combines errors from validation
 // with errors from deserialization, then maps both the
 // resulting struct and the errors to the context.
-func validateAndMap(obj reflect.Value, ctx *macaron.Context, errors Errors, ifacePtr ...interface{}) {
+func validateAndMap(obj reflect.Value, ctx *bigo.Context, errors Errors, ifacePtr ...interface{}) {
 	ctx.Invoke(Validate(obj.Interface()))
 	errors = append(errors, getErrors(ctx)...)
 	ctx.Map(errors)
@@ -595,7 +595,7 @@ func validateAndMap(obj reflect.Value, ctx *macaron.Context, errors Errors, ifac
 }
 
 // getErrors simply gets the errors from the context (it's kind of a chore)
-func getErrors(ctx *macaron.Context) Errors {
+func getErrors(ctx *bigo.Context) Errors {
 	return ctx.GetVal(reflect.TypeOf(Errors{})).Interface().(Errors)
 }
 
@@ -603,7 +603,7 @@ type (
 	// ErrorHandler is the interface that has custom error handling process.
 	ErrorHandler interface {
 		// Error handles validation errors with custom process.
-		Error(*macaron.Context, Errors)
+		Error(*bigo.Context, Errors)
 	}
 
 	// Validator is the interface that handles some rudimentary
@@ -615,6 +615,6 @@ type (
 		// in your application. For example, you might verify that a credit
 		// card number matches a valid pattern, but you probably wouldn't
 		// perform an actual credit card authorization here.
-		Validate(*macaron.Context, Errors) Errors
+		Validate(*bigo.Context, Errors) Errors
 	}
 )
