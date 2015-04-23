@@ -36,6 +36,8 @@ import (
 
 const _VERSION = "0.0.4"
 
+var FormTagSameToJson = false
+
 func Version() string {
 	return _VERSION
 }
@@ -467,7 +469,11 @@ func mapForm(formStruct reflect.Value, form map[string][]string,
 			mapForm(structField, form, formfile, errors)
 		}
 
-		inputFieldName := parseFormName(typeField.Name, typeField.Tag.Get("form"))
+		tagName := typeField.Tag.Get("form")
+		if FormTagSameToJson && tagName == "" {
+			tagName = typeField.Tag.Get("json")
+		}
+		inputFieldName := parseFormName(typeField.Name, tagName)
 		if len(inputFieldName) > 0 {
 			if !structField.CanSet() {
 				continue
