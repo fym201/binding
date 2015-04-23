@@ -36,6 +36,7 @@ import (
 
 const _VERSION = "0.0.4"
 
+// if not set the "form" tag and FormTagSameToJson is true,we will use the "json" tag to bind struct field
 var FormTagSameToJson = false
 
 func Version() string {
