@@ -473,6 +473,10 @@ func mapForm(formStruct reflect.Value, form map[string][]string,
 		tagName := typeField.Tag.Get("form")
 		if FormTagSameToJson && tagName == "" {
 			tagName = typeField.Tag.Get("json")
+			if tagName != "" {
+				ts := strings.Split(tagName, ",")
+				tagName = ts[0]
+			}
 		}
 		inputFieldName := parseFormName(typeField.Name, tagName)
 		if len(inputFieldName) > 0 {
